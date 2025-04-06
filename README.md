@@ -56,15 +56,15 @@ print(textwrap.fill(system_content, width=80))
 ```
 
 ```json
-    Given a target sentence construct the underlying meaning representation of the
-    input sentence as a single function with attributes and attribute values. This
-    function should describe the target string accurately and the function must be
-    one of the following ['inform', 'request', 'give_opinion', 'confirm',
-    'verify_attribute', 'suggest', 'request_explanation', 'recommend',
-    'request_attribute']. The attributes must be one of the following: ['name',
-    'exp_release_date', 'release_year', 'developer', 'esrb', 'rating', 'genres',
-    'player_perspective', 'has_multiplayer', 'platforms', 'available_on_steam',
-    'has_linux_release', 'has_mac_release', 'specifier']
+Given a target sentence construct the underlying meaning representation of the
+input sentence as a single function with attributes and attribute values. This
+function should describe the target string accurately and the function must be
+one of the following ['inform', 'request', 'give_opinion', 'confirm',
+'verify_attribute', 'suggest', 'request_explanation', 'recommend',
+'request_attribute']. The attributes must be one of the following: ['name',
+'exp_release_date', 'release_year', 'developer', 'esrb', 'rating', 'genres',
+'player_perspective', 'has_multiplayer', 'platforms', 'available_on_steam',
+'has_linux_release', 'has_mac_release', 'specifier']
 ```
 
 We also have an info file that identifies the datasets and format --- alpaca and sharegpt (great for multimodal tasks) formats are supported --- to use for post training.
@@ -249,11 +249,8 @@ display(Code(filename="/mnt/cluster_storage/viggo/outputs/all_results.json", lan
 display(Image(filename="/mnt/cluster_storage/viggo/outputs/training_loss.png"))
 ```
 
-
     
-![png](e2e-llm-workflows_files/e2e-llm-workflows_21_0.png)
-    
-
+<img src="images/loss.png" width=500>
 
 
 ```bash
@@ -262,11 +259,11 @@ ls /mnt/cluster_storage/viggo/saves/llama3_8b_sft_lora
 ```
 
 ```json
-    TorchTrainer_6ffa1_00000_0_2025-04-06_15-06-49
-    basic-variant-state-2025-04-06_15-06-49.json
-    experiment_state-2025-04-06_15-06-49.json
-    trainer.pkl
-    tuner.pkl
+TorchTrainer_6ffa1_00000_0_2025-04-06_15-06-49
+basic-variant-state-2025-04-06_15-06-49.json
+experiment_state-2025-04-06_15-06-49.json
+trainer.pkl
+tuner.pkl
 ```
 
 ## Batch inference 
@@ -357,35 +354,37 @@ results[0]
 ```
   
 ```json
-    {'batch_uuid': 'af410ea03e304120a33df0571e5fef0f',
-     'embeddings': None,
-     'generated_text': 'request(specifier[weirdest])',
-     'generated_tokens': [2079, 39309, 3125, 58, 906, 404, 5086, 2526, 128009],
-     'input': "What do you think is the weirdest game you've ever played?",
-     'instruction': "Given a target sentence construct the underlying meaning representation of the input sentence as a single function with attributes and attribute values. This function should describe the target string accurately and the function must be one of the following ['inform', 'request', 'give_opinion', 'confirm', 'verify_attribute', 'suggest', 'request_explanation', 'recommend', 'request_attribute']. The attributes must be one of the following: ['name', 'exp_release_date', 'release_year', 'developer', 'esrb', 'rating', 'genres', 'player_perspective', 'has_multiplayer', 'platforms', 'available_on_steam', 'has_linux_release', 'has_mac_release', 'specifier']",
-     'messages': [{'content': "Given a target sentence construct the underlying meaning representation of the input sentence as a single function with attributes and attribute values. This function should describe the target string accurately and the function must be one of the following ['inform', 'request', 'give_opinion', 'confirm', 'verify_attribute', 'suggest', 'request_explanation', 'recommend', 'request_attribute']. The attributes must be one of the following: ['name', 'exp_release_date', 'release_year', 'developer', 'esrb', 'rating', 'genres', 'player_perspective', 'has_multiplayer', 'platforms', 'available_on_steam', 'has_linux_release', 'has_mac_release', 'specifier']",
-       'role': 'system'},
-      {'content': "What do you think is the weirdest game you've ever played?",
-       'role': 'user'}],
-     'metrics': {'arrival_time': 1743978286.1226327,
-      'finished_time': 1743978293.194894,
-      'first_scheduled_time': 1743978286.9711804,
-      'first_token_time': 1743978288.479632,
-      'last_token_time': 1743978293.1929276,
-      'model_execute_time': None,
-      'model_forward_time': None,
-      'scheduler_time': 0.04725466399997913,
-      'time_in_queue': 0.8485476970672607},
-     'model': '/mnt/cluster_storage/viggo/saves/llama3_8b_sft_lora/TorchTrainer_6ffa1_00000_0_2025-04-06_15-06-49/checkpoint_000000/checkpoint',
-     'num_generated_tokens': 9,
-     'num_input_tokens': 170,
-     'output': 'request(specifier[weirdest])',
-     'params': 'SamplingParams(n=1, presence_penalty=0.0, frequency_penalty=0.0, repetition_penalty=1.0, temperature=0.3, top_p=1.0, top_k=-1, min_p=0.0, seed=None, stop=[], stop_token_ids=[], bad_words=[], include_stop_str_in_output=False, ignore_eos=False, max_tokens=250, min_tokens=0, logprobs=None, prompt_logprobs=None, skip_special_tokens=True, spaces_between_special_tokens=True, truncate_prompt_tokens=None, guided_decoding=None)',
-     'prompt': "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nGiven a target sentence construct the underlying meaning representation of the input sentence as a single function with attributes and attribute values. This function should describe the target string accurately and the function must be one of the following ['inform', 'request', 'give_opinion', 'confirm', 'verify_attribute', 'suggest', 'request_explanation', 'recommend', 'request_attribute']. The attributes must be one of the following: ['name', 'exp_release_date', 'release_year', 'developer', 'esrb', 'rating', 'genres', 'player_perspective', 'has_multiplayer', 'platforms', 'available_on_steam', 'has_linux_release', 'has_mac_release', 'specifier']<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nWhat do you think is the weirdest game you've ever played?<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n",
-     'prompt_token_ids': [128000, ...],
-     'request_id': 12,
-     'time_taken_llm': 7.160030726999992,
-     'generated_output': 'request(specifier[weirdest])'}
+{
+    'batch_uuid': 'af410ea03e304120a33df0571e5fef0f',
+    'embeddings': None,
+    'generated_text': 'request(specifier[weirdest])',
+    'generated_tokens': [2079, 39309, 3125, 58, 906, 404, 5086, 2526, 128009],
+    'input': "What do you think is the weirdest game you've ever played?",
+    'instruction': "Given a target sentence construct the underlying meaning representation of the input sentence as a single function with attributes and attribute values. This function should describe the target string accurately and the function must be one of the following ['inform', 'request', 'give_opinion', 'confirm', 'verify_attribute', 'suggest', 'request_explanation', 'recommend', 'request_attribute']. The attributes must be one of the following: ['name', 'exp_release_date', 'release_year', 'developer', 'esrb', 'rating', 'genres', 'player_perspective', 'has_multiplayer', 'platforms', 'available_on_steam', 'has_linux_release', 'has_mac_release', 'specifier']",
+    'messages': [{'content': "Given a target sentence construct the underlying meaning representation of the input sentence as a single function with attributes and attribute values. This function should describe the target string accurately and the function must be one of the following ['inform', 'request', 'give_opinion', 'confirm', 'verify_attribute', 'suggest', 'request_explanation', 'recommend', 'request_attribute']. The attributes must be one of the following: ['name', 'exp_release_date', 'release_year', 'developer', 'esrb', 'rating', 'genres', 'player_perspective', 'has_multiplayer', 'platforms', 'available_on_steam', 'has_linux_release', 'has_mac_release', 'specifier']",
+    'role': 'system'},
+    {'content': "What do you think is the weirdest game you've ever played?",
+    'role': 'user'}],
+    'metrics': {'arrival_time': 1743978286.1226327,
+    'finished_time': 1743978293.194894,
+    'first_scheduled_time': 1743978286.9711804,
+    'first_token_time': 1743978288.479632,
+    'last_token_time': 1743978293.1929276,
+    'model_execute_time': None,
+    'model_forward_time': None,
+    'scheduler_time': 0.04725466399997913,
+    'time_in_queue': 0.8485476970672607},
+    'model': '/mnt/cluster_storage/viggo/saves/llama3_8b_sft_lora/TorchTrainer_6ffa1_00000_0_2025-04-06_15-06-49/checkpoint_000000/checkpoint',
+    'num_generated_tokens': 9,
+    'num_input_tokens': 170,
+    'output': 'request(specifier[weirdest])',
+    'params': 'SamplingParams(n=1, presence_penalty=0.0, frequency_penalty=0.0, repetition_penalty=1.0, temperature=0.3, top_p=1.0, top_k=-1, min_p=0.0, seed=None, stop=[], stop_token_ids=[], bad_words=[], include_stop_str_in_output=False, ignore_eos=False, max_tokens=250, min_tokens=0, logprobs=None, prompt_logprobs=None, skip_special_tokens=True, spaces_between_special_tokens=True, truncate_prompt_tokens=None, guided_decoding=None)',
+    'prompt': "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nGiven a target sentence construct the underlying meaning representation of the input sentence as a single function with attributes and attribute values. This function should describe the target string accurately and the function must be one of the following ['inform', 'request', 'give_opinion', 'confirm', 'verify_attribute', 'suggest', 'request_explanation', 'recommend', 'request_attribute']. The attributes must be one of the following: ['name', 'exp_release_date', 'release_year', 'developer', 'esrb', 'rating', 'genres', 'player_perspective', 'has_multiplayer', 'platforms', 'available_on_steam', 'has_linux_release', 'has_mac_release', 'specifier']<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nWhat do you think is the weirdest game you've ever played?<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n",
+    'prompt_token_ids': [128000, ...],
+    'request_id': 12,
+    'time_taken_llm': 7.160030726999992,
+    'generated_output': 'request(specifier[weirdest])'
+}
 ```
 
 
