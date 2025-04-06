@@ -1,5 +1,10 @@
 # Entity Recognition with LLMs
 
+<div align="left">
+<a target="_blank" href="https://console.anyscale.com/"><img src="https://img.shields.io/badge/🚀 Run_on-Anyscale-9hf"></a>&nbsp;
+<a href="https://github.com/anyscale/e2e-llm-workflows" role="button"><img src="https://img.shields.io/static/v1?label=&amp;message=View%20On%20GitHub&amp;color=586069&amp;logo=github&amp;labelColor=2f363d"></a>&nbsp;
+</div>
+
 Fine-tune an LLM to perform batch inference and online serving for entity recognition. 
 
 **Note**: the intent of this tutorial is to show how Ray can be use to implement end-to-end LLM workflows that can extend to any use case. Also the objective of fine-tuning here is not to create the most performant model (increase `num_train_epochs` if you want to though) but to show it can be leveraged for downstream workloads (batch inference and online serving) at scale.
@@ -25,13 +30,6 @@ aws s3 cp  s3://viggo-ds/val.jsonl /mnt/cluster_storage/viggo/
 aws s3 cp  s3://viggo-ds/test.jsonl /mnt/cluster_storage/viggo/
 aws s3 cp  s3://viggo-ds/dataset_info.json /mnt/cluster_storage/viggo/
 ```
-
-    download: s3://viggo-ds/train.jsonl to ../../../mnt/cluster_storage/viggo/train.jsonl
-    download: s3://viggo-ds/val.jsonl to ../../../mnt/cluster_storage/viggo/val.jsonl
-    download: s3://viggo-ds/test.jsonl to ../../../mnt/cluster_storage/viggo/test.jsonl
-    download: s3://viggo-ds/dataset_info.json to ../../../mnt/cluster_storage/viggo/dataset_info.json
-
-
 
 ```bash
 %%bash
@@ -151,25 +149,26 @@ dataloader_num_workers: 4
 USE_RAY=1 llamafactory-cli train llama3_lora_sft_ray.yaml
 ```
 
-    INFO 04-06 15:06:44 __init__.py:194] No platform detected, vLLM is running on UnspecifiedPlatform
+```ouput
+INFO 04-06 15:06:44 __init__.py:194] No platform detected, vLLM is running on UnspecifiedPlatform
 
-    Training finished iteration 1 at 2025-04-06 15:15:54. Total running time: 9min 5s
-    ╭─────────────────────────────────────────╮
-    │ Training result                         │
-    ├─────────────────────────────────────────┤
-    │ checkpoint_dir_name   checkpoint_000000 │
-    │ time_this_iter_s              482.24643 │
-    │ time_total_s                  482.24643 │
-    │ training_iteration                    1 │
-    │ epoch                             4.704 │
-    │ grad_norm                       0.15772 │
-    │ learning_rate                        0. │
-    │ loss                             0.0026 │
-    │ step                                150 │
-    ╰─────────────────────────────────────────╯
+Training finished iteration 1 at 2025-04-06 15:15:54. Total running time: 9min 5s
+╭─────────────────────────────────────────╮
+│ Training result                         │
+├─────────────────────────────────────────┤
+│ checkpoint_dir_name   checkpoint_000000 │
+│ time_this_iter_s              482.24643 │
+│ time_total_s                  482.24643 │
+│ training_iteration                    1 │
+│ epoch                             4.704 │
+│ grad_norm                       0.15772 │
+│ learning_rate                        0. │
+│ loss                             0.0026 │
+│ step                                150 │
+╰─────────────────────────────────────────╯
 
-    2025-04-06 15:16:17,517	INFO tune.py:1009 -- Wrote the latest version of all result files and experiment state to '/mnt/cluster_storage/viggo/saves/llama3_8b_sft_lora' in 0.0217s.
-
+2025-04-06 15:16:17,517	INFO tune.py:1009 -- Wrote the latest version of all result files and experiment state to '/mnt/cluster_storage/viggo/saves/llama3_8b_sft_lora' in 0.0217s.
+```
 
     
 
@@ -535,7 +534,7 @@ And of course, we can observe our running service (deployments and metrics like 
 
 Seamlessly integrate with your existing CI/CD pipelines by leveraging the Anyscale [CLI](https://docs.anyscale.com/reference/quickstart-cli) or [SDK](https://docs.anyscale.com/reference/quickstart-sdk) to deploy [highly available services](https://docs.anyscale.com/platform/services) and run [reliable batch jobs](https://docs.anyscale.com/platform/jobs). Given we've been developing in an environment that's almost identical to production (multinode cluster), this should drastically speed up our dev → prod velocity.
 
-<img src="https://raw.githubusercontent.com/anyscale/foundational-ray-app/refs/heads/main/images/cicd.png" width=600>
+<img src="https://raw.githubusercontent.com/anyscale/foundational-ray-app/refs/heads/main/images/cicd.png" width=800>
 
 
 
