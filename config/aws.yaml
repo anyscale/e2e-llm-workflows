@@ -1,0 +1,20 @@
+head_node_type:
+  name: head
+  instance_type: m5.2xlarge
+  resources:
+    cpu: 8
+
+auto_select_worker_config: true
+
+# This will be ignored since auto_select_worker_config is enabled,
+# but must be present to pass backend validation.
+# TODO: Remove once validation is fixed.
+worker_node_types:
+- name: cpu-worker
+  instance_type: m5.2xlarge
+  min_workers: 0
+  max_workers: 1
+
+flags:
+  allow-cross-zone-autoscaling: true
+  
