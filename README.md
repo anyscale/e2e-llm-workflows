@@ -11,9 +11,11 @@ Fine-tune an LLM to perform batch inference and online serving for entity recogn
 
 ## Set up
 
-If you're on [Anyscale](https://console.anyscale.com/register/v2), you can run this entire tutorial for free (all dependencies are setup and the necessary compute will autoscale). Otherwise be sure to install the dependencies from the `containerfile` and provision the appropriate GPU resources (4xA10s).
+If you're on [Anyscale](https://console.anyscale.com/), you can run this entire tutorial for free (all dependencies are setup and the necessary compute will autoscale). Otherwise be sure to install the dependencies from the [`containerfile`](containerfile) and provision the appropriate GPU resources (4xA10s).
 
 <img src="https://raw.githubusercontent.com/anyscale/foundational-ray-app/refs/heads/main/images/compute.png" width=500>
+
+**Note**: Be sure to add your [HuggingFace token](https://huggingface.co/settings/tokens) (`HF_TOKEN=`) and `HF_HUB_ENABLE_HF_TRANSFER=1` (enbales faster uploads and downloads from HF hub) as environment variables (under the *Dependencies* tab on Anyscale).
 
 ## Data
 
@@ -176,7 +178,25 @@ Training finished iteration 1 at 2025-04-06 15:15:54. Total running time: 9min 5
 2025-04-06 15:16:17,517	INFO tune.py:1009 -- Wrote the latest version of all result files and experiment state to '/mnt/cluster_storage/viggo/saves/llama3_8b_sft_lora' in 0.0217s.
 ```
 
-    
+<div class="alert alert-block alert"> <b>Ray Train</b> 
+
+Using [Ray Train](https://docs.ray.io/en/latest/train/train.html) here has several advantages:
+- automatically handles **multi-node, multi-GPU** setup with no manual SSH setup or hostfile configs. 
+- define **per-worker franctional resource requirements** (e.g., 2 CPUs and 0.5 GPU per worker)
+- run on **heterogeneous machines** and scale flexibly (e.g., CPU for preprocessing and GPU for training) 
+- built-in **fault tolerance** via retry of failed workers (and continue from last checkpoint).
+- supports Data Parallel, Model Parallel, Parameter Server, and even custom strategies.
+- [Ray Compiled graphs](https://docs.ray.io/en/latest/ray-core/compiled-graph/ray-compiled-graph.html) allow us to even define different parallelism for jointly optimizing multipe models (Megatron, Deepspeed, etc. only allow for one global setting).
+
+[RayTurbo Train](https://docs.anyscale.com/rayturbo/rayturbo-train) offers even more improvement to the price-performance ratio, performance monitoring and more:
+- **elastic training** to scale to a dynamic number of workers, continue training on fewer resources (even on spot instances).
+- **purpose-built dashboard** designed to streamline the debugging of Ray Train workloads
+    - Monitoring: View the status of training runs and train workers.
+    - Metrics: See insights on training throughput, training system operation time.
+    - Profiling: Investigate bottlenecks, hangs, or errors from individual training worker processes.
+
+<img src="https://raw.githubusercontent.com/anyscale/foundational-ray-app/refs/heads/main/images/train_dashboard.png" width=700> 
+
 
 
 <div class="alert alert-block alert"> <b> 🔎 Monitoring and Debugging with Ray</b> 
@@ -538,10 +558,23 @@ And of course, we can observe our running service (deployments and metrics like 
 
 ### Production
 
-Seamlessly integrate with your existing CI/CD pipelines by leveraging the Anyscale [CLI](https://docs.anyscale.com/reference/quickstart-cli) or [SDK](https://docs.anyscale.com/reference/quickstart-sdk) to deploy [highly available services](https://docs.anyscale.com/platform/services) and run [reliable batch jobs](https://docs.anyscale.com/platform/jobs). Given we've been developing in an environment that's almost identical to production (multinode cluster), this should drastically speed up our dev → prod velocity.
+Seamlessly integrate with your existing CI/CD pipelines by leveraging the Anyscale [CLI](https://docs.anyscale.com/reference/quickstart-cli) or [SDK](https://docs.anyscale.com/reference/quickstart-sdk) to run [reliable batch jobs](https://docs.anyscale.com/platform/jobs) and deploy [highly available services](https://docs.anyscale.com/platform/services). Given we've been developing in an environment that's almost identical to production (multinode cluster), this should drastically speed up our dev → prod velocity.
 
-<img src="https://raw.githubusercontent.com/anyscale/foundational-ray-app/refs/heads/main/images/cicd.png" width=800>
+<img src="https://raw.githubusercontent.com/anyscale/foundational-ray-app/refs/heads/main/images/cicd.png" width=500>
 
+[Anyscale Jobs](https://docs.anyscale.com/platform/jobs/) ([API ref](https://docs.anyscale.com/reference/job-api/)) allows us to execute discrete workloads in production such as batch inference, embeddings generation, or model fine-tuning.
+- [define and manage](https://docs.anyscale.com/platform/jobs/manage-jobs) our Jobs in many different ways (CLI, Python SDK)
+- set up [queues](https://docs.anyscale.com/platform/jobs/job-queues) and [schedules](https://docs.anyscale.com/platform/jobs/schedules)
+- set up all the [observability, alerting, etc.](https://docs.anyscale.com/platform/jobs/monitoring-and-debugging) around our Jobs
+
+[Anyscale Services](https://docs.anyscale.com/platform/services/) ([API ref](https://docs.anyscale.com/reference/service-api/)) offers an extremely fault tolerant, scalable and optimized way to serve our Ray Serve applications.
+- we can [rollout and update](https://docs.anyscale.com/platform/services/update-a-service) our services with canary deployment (zero-downtime upgrades)
+- [monitor](https://docs.anyscale.com/platform/services/monitoring) our Services through a dedicated Service page, unified log viewer, tracing, set up alerts, etc.
+- scale a service (`num_replicas=auto`) and utilize replica compaction to consolidate nodes that are fractionally utilized
+- [head node fault tolerance](https://docs.anyscale.com/platform/services/production-best-practices#head-node-ft) (OSS Ray recovers from failed workers and replicas but not head node crashes)
+- serving [muliple applications](https://docs.anyscale.com/platform/services/multi-app) in a single Service
+
+<img src="https://raw.githubusercontent.com/anyscale/foundational-ray-app/refs/heads/main/images/canary.png" width=700>
 
 
 ```bash
