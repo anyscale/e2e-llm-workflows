@@ -1,7 +1,7 @@
 # Entity Recognition with LLMs
 
 <div align="left">
-<a target="_blank" href="https://console.anyscale.com/"><img src="https://img.shields.io/badge/🚀 Run_on-Anyscale-9hf"></a>&nbsp;
+<a target="_blank" href="https://console.anyscale.com/template-preview/entity-recognition-with-llms"><img src="https://img.shields.io/badge/🚀 Run_on-Anyscale-9hf"></a>&nbsp;
 <a href="https://github.com/anyscale/e2e-llm-workflows" role="button"><img src="https://img.shields.io/static/v1?label=&amp;message=View%20On%20GitHub&amp;color=586069&amp;logo=github&amp;labelColor=2f363d"></a>&nbsp;
 </div>
 
@@ -13,11 +13,23 @@ Fine-tune an LLM to perform batch inference and online serving for entity recogn
 
 ## Set up
 
-If you're on [Anyscale](https://console.anyscale.com/), you can run this entire tutorial for free (all dependencies are setup and the necessary compute will autoscale). Otherwise be sure to install the dependencies from the [`containerfile`](containerfile) and provision the appropriate GPU resources (4xA10s).
+If you're on [Anyscale](https://console.anyscale.com/template-preview/entity-recognition-with-llms), you can run this entire tutorial for free (all dependencies are setup and the necessary compute will autoscale). Otherwise be sure to install the dependencies from the [`containerfile`](containerfile) and provision the appropriate GPU resources (4xA10s).
 
 <img src="https://raw.githubusercontent.com/anyscale/foundational-ray-app/refs/heads/main/images/compute.png" width=500>
 
-**Note**: Be sure to add your [HuggingFace token](https://huggingface.co/settings/tokens) (`HF_TOKEN=`) and `HF_HUB_ENABLE_HF_TRANSFER=1` (enbales faster uploads and downloads from HF hub) as environment variables (under the *Dependencies* tab on Anyscale).
+**Note**: Be sure to add your [HuggingFace token](https://huggingface.co/settings/tokens) (`HF_TOKEN=<HF_TOKEN>`) (with access to the model you want to use) and `HF_HUB_ENABLE_HF_TRANSFER=1` (enbales faster uploads and downloads from HF hub) to a `.env` file.
+
+```python
+# Load env vars on head node and all future worker nodes
+import os
+from dotenv import load_dotenv
+import ray
+load_dotenv()
+ray.init(runtime_env={
+    "HF_TOKEN": os.getenv("HF_TOKEN"),
+    "HF_HUB_ENABLE_HF_TRANSFER": os.getenv("HF_HUB_ENABLE_HF_TRANSFER"),
+})
+```
 
 ## Data
 
@@ -43,7 +55,7 @@ aws s3 cp  s3://viggo-ds/dataset_info.json /mnt/cluster_storage/viggo/
 
 ```bash
 %%bash
-head -n 1 /mnt/cluster_storage/viggo/train.jsonl | jq
+head -n 1 /mnt/cluster_storage/viggo/train.jsonl | python3 -m json.tool
 ```
 
 ```json
