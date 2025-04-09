@@ -24,6 +24,8 @@ If you're on [Anyscale](https://console.anyscale.com/template-preview/entity-rec
 import os
 from dotenv import load_dotenv
 import ray
+```
+```python
 load_dotenv()
 ray.init(runtime_env={
     "HF_TOKEN": os.getenv("HF_TOKEN"),
