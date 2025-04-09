@@ -17,23 +17,14 @@ If you're on [Anyscale](https://console.anyscale.com/template-preview/entity-rec
 
 <img src="https://raw.githubusercontent.com/anyscale/foundational-ray-app/refs/heads/main/images/compute.png" width=500>
 
-**Note**: Be sure to add your [HuggingFace token](https://huggingface.co/settings/tokens) (`HF_TOKEN=<HF_TOKEN>`) (with access to the model you want to use) and `HF_HUB_ENABLE_HF_TRANSFER=1` (enbales faster uploads and downloads from HF hub) to a `.env` file.
 
 ```python
 import os
-from dotenv import load_dotenv
-import ray
+os.environ["HF_TOKEN"] = "<INSERT_HF_TOKEN>"  # or use .env
 ```
-```python
-# Load env vars on head node and all future worker nodes
-load_dotenv(override=True)
-ray.init(runtime_env={
-    "env_vars": {
-        "HF_TOKEN": os.getenv("HF_TOKEN"),
-        "HF_HUB_ENABLE_HF_TRANSFER": os.getenv("HF_HUB_ENABLE_HF_TRANSFER"),
-    },
-})
-```
+
+**Note**: Be sure to add your [HuggingFace token](https://huggingface.co/settings/tokens) (`HF_TOKEN=<HF_TOKEN>`) (with access to the model you want to use) and `HF_HUB_ENABLE_HF_TRANSFER=1` (enbales faster uploads and downloads from HF hub) to the *Dependencies* tab.
+
 
 ## Data
 
