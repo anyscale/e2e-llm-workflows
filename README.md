@@ -7,6 +7,8 @@
 
 Fine-tune an LLM to perform batch inference and online serving for entity recognition. 
 
+<img src="https://raw.githubusercontent.com/anyscale/foundational-ray-app/refs/heads/main/images/e2e_llm.png" width=800>
+
 **Note**: the intent of this tutorial is to show how Ray can be use to implement end-to-end LLM workflows that can extend to any use case. Also the objective of fine-tuning here is not to create the most performant model (increase `num_train_epochs` if you want to though) but to show it can be leveraged for downstream workloads (batch inference and online serving) at scale.
 
 ## Set up
@@ -236,7 +238,7 @@ We can always store to our data inside [any storage buckets](https://docs.anysca
 echo $ANYSCALE_ARTIFACT_STORAGE
 ```
 
-    s3://anyscale-test-data-cld-i2w99rzq8b6lbjkke9y94vi5/org_7c1Kalm9WcX2bNIjW53GUT/cld_kvedZWag2qA8i5BjxUevf5i7/artifact_storage
+s3://anyscale-test-data-cld-i2w99rzq8b6lbjkke9y94vi5/org_7c1Kalm9WcX2bNIjW53GUT/cld_kvedZWag2qA8i5BjxUevf5i7/artifact_storage
 
 
 
