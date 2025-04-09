@@ -197,10 +197,6 @@ Using [Ray Train](https://docs.ray.io/en/latest/train/train.html) here has sever
     - Metrics: See insights on training throughput, training system operation time.
     - Profiling: Investigate bottlenecks, hangs, or errors from individual training worker processes.
 
-<img src="https://raw.githubusercontent.com/anyscale/foundational-ray-app/refs/heads/main/images/train_dashboard.png" width=700> 
-
-
-
 <div class="alert alert-block alert"> <b> 🔎 Monitoring and Debugging with Ray</b> 
 
 
@@ -222,7 +218,7 @@ While OSS Ray comes with an extensive obervability suite, Anyscale takes it many
 - [unified log viewer](https://docs.anyscale.com/monitoring/accessing-logs/) to see logs from *all* our driver and worker processes
 - Ray workload specific dashboard (Data, Train, etc.) that can breakdown the tasks. For example, our training workload above can be observed live through the Train specific Ray Workloads dashboard:
 
-<img src="images/train_dashboard.png" width=700>
+<img src="https://raw.githubusercontent.com/anyscale/e2e-llm-workflows/refs/heads/main/images/train_dashboard.png" width=700>
 
 
 
@@ -277,7 +273,7 @@ display(Image(filename="/mnt/cluster_storage/viggo/outputs/training_loss.png"))
 ```
 
     
-<img src="images/loss.png" width=500>
+<img src="https://raw.githubusercontent.com/anyscale/e2e-llm-workflows/refs/heads/main/images/loss.png" width=500>
 
 
 ```bash
@@ -311,7 +307,7 @@ The `ray.data.llm` module integrates with key large language model (LLM) inferen
 
 Let's start by defining the [vLLM engine processor config](https://docs.ray.io/en/latest/data/api/doc/ray.data.llm.vLLMEngineProcessorConfig.html#ray.data.llm.vLLMEngineProcessorConfig) where we can select the model we want to use and the [engine behavior](https://docs.vllm.ai/en/stable/serving/engine_args.html). The model can come from [HuggingFace (HF) Hub](https://huggingface.co/models) or a local model path `/path/to/your/model` (GPTQ, GGUF, or LoRA model formats supported).
 
-<img src="images/data_llm.png" width=800>
+<img src="https://raw.githubusercontent.com/anyscale/e2e-llm-workflows/refs/heads/main/images/data_llm.png" width=800>
 
 
 ```python
@@ -439,7 +435,7 @@ matches / float(len(results))
 
 And of course, we can observe the individual steps in our our batch inference workload through the Anyscale Ray Data dashboard:
 
-<img src="images/data_dashboard.png" width=1000>
+<img src="https://raw.githubusercontent.com/anyscale/e2e-llm-workflows/refs/heads/main/images/data_dashboard.png" width=1000>
 
 <div class="alert alert-info">
 
@@ -454,7 +450,7 @@ And of course, we can observe the individual steps in our our batch inference wo
 
 `ray.serve.llm` APIs allow users to deploy multiple LLM models together with a familiar Ray Serve API, while providing compatibility with the OpenAI API.
 
-<img src="images/serve_llm.png" width=500>
+<img src="https://raw.githubusercontent.com/anyscale/e2e-llm-workflows/refs/heads/main/images/serve_llm.png" width=500>
 
 Ray Serve LLM is designed with the following features:
 - Automatic scaling and load balancing
@@ -551,7 +547,7 @@ Hope that made you smile!
 
 And of course, we can observe our running service (deployments and metrics like QPS, latency, etc.) through the [Ray Dashboard](https://docs.ray.io/en/latest/ray-observability/getting-started.html)'s [Serve view](https://docs.ray.io/en/latest/ray-observability/getting-started.html#dash-serve-view):
 
-<img src="images/serve_dashboard.png" width=1000>
+<img src="https://raw.githubusercontent.com/anyscale/e2e-llm-workflows/refs/heads/main/images/serve_dashboard.png" width=1000>
 
 <div class="alert alert-info">
 
