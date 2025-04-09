@@ -448,6 +448,8 @@ And of course, we can observe the individual steps in our our batch inference wo
 ## Online serving
 [`Overview`](https://docs.ray.io/en/latest/serve/llm/serving-llms.html) | [`API reference`](https://docs.ray.io/en/latest/serve/api/index.html#llm-api)
 
+<img src="https://raw.githubusercontent.com/anyscale/foundational-ray-app/refs/heads/main/images/ray_serve.png" width=600>
+
 `ray.serve.llm` APIs allow users to deploy multiple LLM models together with a familiar Ray Serve API, while providing compatibility with the OpenAI API.
 
 <img src="images/serve_llm.png" width=500>
@@ -467,7 +469,6 @@ Ray Serve LLM is designed with the following features:
 - **zero-downtime** [incremental rollouts](https://docs.anyscale.com/platform/services/update-a-service/#resource-constrained-updates) so your service is never interrupted
 - [**different environments**](https://docs.anyscale.com/platform/services/multi-app/#multiple-applications-in-different-containers) for each service in a multi-serve application
 - **multi availability-zone** aware scheduling of Ray Serve replicas to provide higher redundancy to availability zone failures
-
 
 
 ```python
