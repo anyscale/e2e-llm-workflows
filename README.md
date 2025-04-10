@@ -296,6 +296,16 @@ trainer.pkl
 tuner.pkl
 ```
 
+```
+# LoRA paths
+save_dir = Path("/mnt/cluster_storage/viggo/saves/llama3_8b_sft_lora")
+trainer_dirs = [d for d in save_dir.iterdir() if d.name.startswith("TorchTrainer_") and d.is_dir()]
+latest_trainer = max(trainer_dirs, key=lambda d: d.stat().st_mtime, default=None)
+lora_path = f"{latest_trainer}/checkpoint_000000/checkpoint"
+s3_lora_path = os.path.join(os.getenv("ANYSCALE_ARTIFACT_STORAGE"), lora_path.split("/mnt/cluster_storage/")[-1])
+dynamic_lora_path, lora_id = s3_lora_path.rsplit("/", 1)
+```
+
 ## Batch inference 
 [`Overview`](https://docs.ray.io/en/latest/data/working-with-llms.html) |  [`API reference`](https://docs.ray.io/en/latest/data/api/llm.html)
 
@@ -480,7 +490,7 @@ Ray Serve LLM is designed with the following features:
 import os
 from openai import OpenAI  # to use openai api format
 from ray import serve
-from ray.serve.llm import LLMConfig, LLMServer, LLMRouter
+from ray.serve.llm import LLMConfig, build_openai_app
 ```
 
 Let's define an [LLM config](https://docs.ray.io/en/latest/serve/api/doc/ray.serve.llm.LLMConfig.html#ray.serve.llm.LLMConfig) where we can define where our model comes from, it's [autoscaling behavior](https://docs.ray.io/en/latest/serve/autoscaling-guide.html#serve-autoscaling), what hardware to use and [engine arguments](https://docs.vllm.ai/en/stable/serving/engine_args.html).
@@ -495,8 +505,8 @@ llm_config = LLMConfig(
         "model_id": model_id,
         "model_source": model_source
     },
-    lora_config={  # REMOVE this if you are only using a base model
-        "dynamic_lora_loading_path": s3_lora_path,
+    lora_config={  # REMOVE this section if you are only using a base model
+        "dynamic_lora_loading_path": dynamic_lora_path,
         "max_num_adapters_per_replica": 16,  # we only have 1
     },
     runtime_env={"env_vars": {"HF_TOKEN": os.environ.get("HF_TOKEN")}},
@@ -510,6 +520,7 @@ llm_config = LLMConfig(
     accelerator_type="A10G",
     engine_kwargs={
         "tensor_parallel_size": 1,
+        "enable_lora": True,
         # complete list: https://docs.vllm.ai/en/stable/serving/engine_args.html
     },
 )
@@ -520,9 +531,8 @@ Now we'll deploy our llm config as an application. And since this is all built o
 
 ```python
 # Deploy
-deployment = LLMServer.as_deployment(llm_config.get_serve_options(name_prefix="VLLM:")).bind(llm_config)
-llm_app = LLMRouter.as_deployment().bind([deployment])
-serve.run(llm_app)
+app = build_openai_app({"llm_configs": [llm_config]})
+serve.run(app)
 ```
 
 ```bash
@@ -535,8 +545,11 @@ DeploymentHandle(deployment='LLMRouter')
 # Initialize client
 client = OpenAI(base_url="http://localhost:8000/v1", api_key="fake-key")
 response = client.chat.completions.create(
-    model=model_id,
-    messages=[{"role": "user", "content": "Tell me a joke."}],
+    model=f"{model_id}:{lora_id}",
+    messages=[
+        {"role": "system", "content": "Given a target sentence construct the underlying meaning representation of the input sentence as a single function with attributes and attribute values. This function should describe the target string accurately and the function must be one of the following ['inform', 'request', 'give_opinion', 'confirm', 'verify_attribute', 'suggest', 'request_explanation', 'recommend', 'request_attribute']. The attributes must be one of the following: ['name', 'exp_release_date', 'release_year', 'developer', 'esrb', 'rating', 'genres', 'player_perspective', 'has_multiplayer', 'platforms', 'available_on_steam', 'has_linux_release', 'has_mac_release', 'specifier']"},
+        {"role": "user", "content": "Blizzard North is mostly an okay developer, but they released Diablo II for the Mac and so that pushes the game from okay to good in my view."},
+    ],
     stream=True
 )
 for chunk in response:
@@ -545,10 +558,7 @@ for chunk in response:
 ```
 
 ```output
-Here's one:
-Why couldn't the bicycle stand up by itself?
-Because it was two-tired!
-Hope that made you smile!
+give_opinion(name[Diablo II], developer[Blizzard North], rating[good], has_mac_release[yes])
 ```
 
 
