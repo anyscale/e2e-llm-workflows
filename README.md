@@ -1,30 +1,40 @@
 # Entity Recognition with LLMs
 
 <div align="left">
-<a target="_blank" href="https://console.anyscale.com/template-preview/entity-recognition-with-llms"><img src="https://img.shields.io/badge/🚀 Run_on-Anyscale-9hf"></a>&nbsp;
+<a target="_blank" href="https://console.anyscale.com/"><img src="https://img.shields.io/badge/🚀 Run_on-Anyscale-9hf"></a>&nbsp;
 <a href="https://github.com/anyscale/e2e-llm-workflows" role="button"><img src="https://img.shields.io/static/v1?label=&amp;message=View%20On%20GitHub&amp;color=586069&amp;logo=github&amp;labelColor=2f363d"></a>&nbsp;
 </div>
 
-Fine-tune an LLM to perform batch inference and online serving for entity recognition. 
+An end-to-end tutorial where we'll fine-tune an LLM to perform batch inference and online serving at scale. While entity recognition is the main task, we can easily extend these end-to-end workflows to any use case.
 
 <img src="https://raw.githubusercontent.com/anyscale/e2e-llm-workflows/refs/heads/main/images/e2e_llm.png" width=800>
 
-**Note**: the intent of this tutorial is to show how Ray can be use to implement end-to-end LLM workflows that can extend to any use case. Also the objective of fine-tuning here is not to create the most performant model (increase `num_train_epochs` if you want to though) but to show it can be leveraged for downstream workloads (batch inference and online serving) at scale.
+**Note**: the intent of this tutorial is to show how Ray can be use to implement end-to-end LLM workflows that can extend to any use case. 
 
 ## Set up
 
-If you're on [Anyscale](https://console.anyscale.com/template-preview/entity-recognition-with-llms), you can run this entire tutorial for free (all dependencies are setup and the necessary compute will autoscale). Otherwise be sure to install the dependencies from the [`containerfile`](containerfile) and provision the appropriate GPU resources (4xA10s).
+### Compute
+This [Anyscale Workspace](https://docs.anyscale.com/platform/workspaces/) will automatically provision and autoscale the compute our workloads will need. If you're not on Anyscale, then you will need to provision `4xA10G:48CPU-192GB` for this tutorial.
 
 <img src="https://raw.githubusercontent.com/anyscale/foundational-ray-app/refs/heads/main/images/compute.png" width=500>
 
+### Dependencies
+Let's start by downloading the dependencies required for this tutorial. You'll notice in our [`containerfile`](https://raw.githubusercontent.com/anyscale/e2e-llm-workflows/refs/heads/main/containerfile) we have a base image `FROM anyscale/ray:2.44.1-py312-cu125` followed by a list of pip packages. If you're not on any [Anyscale](https://console.anyscale.com/), you can pull this docker image yourself and install the dependencies.
 
-```python
-import os
-os.environ["HF_TOKEN"] = "<INSERT_HF_TOKEN>"  # or use .env
+
+
+```bash
+%%bash
+# Install dependencies
+pip install -q \
+    "ray[serve,llm]>=2.44.0" \
+    "vllm>=0.7.2" \
+    "xgrammar==0.1.11" \
+    "pynvml==12.0.0" \
+    "hf_transfer==0.1.9" \
+    "tensorboard" \
+    "llamafactory @ git+https://github.com/hiyouga/LLaMA-Factory.git#egg=llamafactory"
 ```
-
-**Note**: Be sure to add your [HuggingFace token](https://huggingface.co/settings/tokens) (`HF_TOKEN=<HF_TOKEN>`) (with access to the model you want to use) and `HF_HUB_ENABLE_HF_TRANSFER=1` (enbales faster uploads and downloads from HF hub) to the *Dependencies* tab.
-
 
 ## Data
 
@@ -62,6 +72,7 @@ head -n 1 /mnt/cluster_storage/viggo/train.jsonl | python3 -m json.tool
 ```
 
 
+
 ```python
 with open("/mnt/cluster_storage/viggo/train.jsonl", "r") as fp:
     first_line = fp.readline()
@@ -70,7 +81,6 @@ system_content = item["instruction"]
 print(textwrap.fill(system_content, width=80))
 ```
 
-```output
 Given a target sentence construct the underlying meaning representation of the
 input sentence as a single function with attributes and attribute values. This
 function should describe the target string accurately and the function must be
@@ -80,7 +90,7 @@ one of the following ['inform', 'request', 'give_opinion', 'confirm',
 'exp_release_date', 'release_year', 'developer', 'esrb', 'rating', 'genres',
 'player_perspective', 'has_multiplayer', 'platforms', 'available_on_steam',
 'has_linux_release', 'has_mac_release', 'specifier']
-```
+
 
 We also have an info file that identifies the datasets and format --- alpaca and sharegpt (great for multimodal tasks) formats are supported --- to use for post training.
 
@@ -114,6 +124,7 @@ display(Code(filename="/mnt/cluster_storage/viggo/dataset_info.json", language="
 ```
 
 
+
 ## Distributed fine-tuning
 
 We'll use [Ray Train](https://docs.ray.io/en/latest/train/train.html) + [LLaMA-Factory](https://github.com/hiyouga/LLaMA-Factory) to peform multinode training. The parameters for our training workload -- post-training method, dataset location, train/val details, etc. --- can be found in the `llama3_lora_sft_ray.yaml` config file. Check out recipes for even more post-training methods (sft, pretraining, ppo, dpo, kto, etc.) [here](https://github.com/hiyouga/LLaMA-Factory/tree/main/examples).
@@ -126,17 +137,19 @@ We'll use [Ray Train](https://docs.ray.io/en/latest/train/train.html) + [LLaMA-F
 ```python
 import os
 from pathlib import Path
+import yaml
 ```
 
 
 ```python
-display(Code(filename="llama3_lora_sft_ray.yaml", language="yaml"))
+display(Code(filename="lora_sft_ray.yaml", language="yaml"))
 ```
 
 ```yaml
 ### model
-model_name_or_path: meta-llama/Meta-Llama-3-8B-Instruct
+model_name_or_path: Qwen/Qwen2.5-7B-Instruct
 trust_remote_code: true
+
 
 ### method
 stage: sft
@@ -145,47 +158,144 @@ finetuning_type: lora
 lora_rank: 8
 lora_target: all
 
+
 ### dataset
 dataset: viggo-train
 dataset_dir: /mnt/cluster_storage/viggo  # shared storage workers have access to
-template: llama3
+template: qwen
 cutoff_len: 2048
 max_samples: 1000
 overwrite_cache: true
 preprocessing_num_workers: 16
 dataloader_num_workers: 4
 
-...
+
+### output
+output_dir: /mnt/cluster_storage/viggo/outputs  # should be somewhere workers have access to (ex. s3, nfs)
+logging_steps: 10
+save_steps: 500
+plot_loss: true
+overwrite_output_dir: true
+save_only_model: false
+
+
+### ray
+ray_run_name: lora_sft_ray
+ray_storage_path: /mnt/cluster_storage/viggo/saves  # should be somewhere workers have access to (ex. s3, nfs)
+ray_num_workers: 4
+resources_per_worker:
+  GPU: 1
+  anyscale/accelerator_shape:4xA10G: 1  # Use this to specify a specific node shape,
+  # accelerator_type:A10G: 1           # Or use this to simply specify a GPU type.
+  # see https://docs.ray.io/en/master/ray-core/accelerator-types.html#accelerator-types for a full list of accelerator types
+placement_strategy: PACK
+
+
+### train
+per_device_train_batch_size: 1
+gradient_accumulation_steps: 8
+learning_rate: 1.0e-4
+num_train_epochs: 5.0
+lr_scheduler_type: cosine
+warmup_ratio: 0.1
+bf16: true
+ddp_timeout: 180000000
+resume_from_checkpoint: null
+
+
+### eval
+eval_dataset: viggo-val  # uses same dataset_dir as training data
+# val_size: 0.1  # only if using part of training data for validation
+per_device_eval_batch_size: 1
+eval_strategy: steps
+eval_steps: 500
 ```
+
+
+
+```python
+model_id = "ft-model"  # call it whatever you want
+model_source = yaml.safe_load(open("lora_sft_ray.yaml"))["model_name_or_path"]  # HF model ID, S3 mirror config, or GCS mirror config
+print (model_source)
+```
+
+Qwen/Qwen2.5-7B-Instruct
 
 
 
 ```bash
 %%bash
 # Run multinode distributed fine-tuning workload
-USE_RAY=1 llamafactory-cli train llama3_lora_sft_ray.yaml
+USE_RAY=1 llamafactory-cli train lora_sft_ray.yaml
 ```
+    
+    Training started with configuration:
+    ╭──────────────────────────────────────────────────────────────────────────────────────────────────────╮
+    │ Training config                                                                                      │
+    ├──────────────────────────────────────────────────────────────────────────────────────────────────────┤
+    │ train_loop_config/args/bf16                                                                     True │
+    │ train_loop_config/args/cutoff_len                                                               2048 │
+    │ train_loop_config/args/dataloader_num_workers                                                      4 │
+    │ train_loop_config/args/dataset                                                           viggo-train │
+    │ train_loop_config/args/dataset_dir                                              ...ter_storage/viggo │
+    │ train_loop_config/args/ddp_timeout                                                         180000000 │
+    │ train_loop_config/args/do_train                                                                 True │
+    │ train_loop_config/args/eval_dataset                                                        viggo-val │
+    │ train_loop_config/args/eval_steps                                                                500 │
+    │ train_loop_config/args/eval_strategy                                                           steps │
+    │ train_loop_config/args/finetuning_type                                                          lora │
+    │ train_loop_config/args/gradient_accumulation_steps                                                 8 │
+    │ train_loop_config/args/learning_rate                                                          0.0001 │
+    │ train_loop_config/args/logging_steps                                                              10 │
+    │ train_loop_config/args/lora_rank                                                                   8 │
+    │ train_loop_config/args/lora_target                                                               all │
+    │ train_loop_config/args/lr_scheduler_type                                                      cosine │
+    │ train_loop_config/args/max_samples                                                              1000 │
+    │ train_loop_config/args/model_name_or_path                                       ...en2.5-7B-Instruct │
+    │ train_loop_config/args/num_train_epochs                                                          5.0 │
+    │ train_loop_config/args/output_dir                                               ...age/viggo/outputs │
+    │ train_loop_config/args/overwrite_cache                                                          True │
+    │ train_loop_config/args/overwrite_output_dir                                                     True │
+    │ train_loop_config/args/per_device_eval_batch_size                                                  1 │
+    │ train_loop_config/args/per_device_train_batch_size                                                 1 │
+    │ train_loop_config/args/placement_strategy                                                       PACK │
+    │ train_loop_config/args/plot_loss                                                                True │
+    │ train_loop_config/args/preprocessing_num_workers                                                  16 │
+    │ train_loop_config/args/ray_num_workers                                                             4 │
+    │ train_loop_config/args/ray_run_name                                                     lora_sft_ray │
+    │ train_loop_config/args/ray_storage_path                                         ...orage/viggo/saves │
+    │ train_loop_config/args/resources_per_worker/GPU                                                    1 │
+    │ train_loop_config/args/resources_per_worker/anyscale/accelerator_shape:4xA10G                      1 │
+    │ train_loop_config/args/resume_from_checkpoint                                                        │
+    │ train_loop_config/args/save_only_model                                                         False │
+    │ train_loop_config/args/save_steps                                                                500 │
+    │ train_loop_config/args/stage                                                                     sft │
+    │ train_loop_config/args/template                                                                 qwen │
+    │ train_loop_config/args/trust_remote_code                                                        True │
+    │ train_loop_config/args/warmup_ratio                                                              0.1 │
+    │ train_loop_config/callbacks                                                     ... 0x7e1262910e10>] │
+    ╰──────────────────────────────────────────────────────────────────────────────────────────────────────╯
 
-```ouput
-INFO 04-06 15:06:44 __init__.py:194] No platform detected, vLLM is running on UnspecifiedPlatform
+    100%|██████████| 155/155 [07:12<00:00,  2.85s/it][INFO|trainer.py:3942] 2025-04-11 14:57:59,207 >> Saving model checkpoint to /mnt/cluster_storage/viggo/outputs/checkpoint-155
+    
+    Training finished iteration 1 at 2025-04-11 14:58:02. Total running time: 10min 24s
+    ╭─────────────────────────────────────────╮
+    │ Training result                         │
+    ├─────────────────────────────────────────┤
+    │ checkpoint_dir_name   checkpoint_000000 │
+    │ time_this_iter_s              521.83827 │
+    │ time_total_s                  521.83827 │
+    │ training_iteration                    1 │
+    │ epoch                             4.704 │
+    │ grad_norm                       0.14288 │
+    │ learning_rate                        0. │
+    │ loss                             0.0065 │
+    │ step                                150 │
+    ╰─────────────────────────────────────────╯
+    Training saved a checkpoint for iteration 1 at: (local)/mnt/cluster_storage/viggo/saves/lora_sft_ray/TorchTrainer_95d16_00000_0_2025-04-11_14-47-37/checkpoint_000000
 
-Training finished iteration 1 at 2025-04-06 15:15:54. Total running time: 9min 5s
-╭─────────────────────────────────────────╮
-│ Training result                         │
-├─────────────────────────────────────────┤
-│ checkpoint_dir_name   checkpoint_000000 │
-│ time_this_iter_s              482.24643 │
-│ time_total_s                  482.24643 │
-│ training_iteration                    1 │
-│ epoch                             4.704 │
-│ grad_norm                       0.15772 │
-│ learning_rate                        0. │
-│ loss                             0.0026 │
-│ step                                150 │
-╰─────────────────────────────────────────╯
+    
 
-2025-04-06 15:16:17,517	INFO tune.py:1009 -- Wrote the latest version of all result files and experiment state to '/mnt/cluster_storage/viggo/saves/llama3_8b_sft_lora' in 0.0217s.
-```
 
 <div class="alert alert-block alert"> <b>Ray Train</b> 
 
@@ -203,6 +313,8 @@ Using [Ray Train](https://docs.ray.io/en/latest/train/train.html) here has sever
     - Monitoring: View the status of training runs and train workers.
     - Metrics: See insights on training throughput, training system operation time.
     - Profiling: Investigate bottlenecks, hangs, or errors from individual training worker processes.
+
+<img src="https://raw.githubusercontent.com/anyscale/foundational-ray-app/refs/heads/main/images/train_dashboard.png" width=700>
 
 <div class="alert alert-block alert"> <b> 🔎 Monitoring and Debugging with Ray</b> 
 
@@ -261,50 +373,81 @@ display(Code(filename="/mnt/cluster_storage/viggo/outputs/all_results.json", lan
 ```json
 {
     "epoch": 4.864,
-    "eval_viggo-val_loss": 0.11676677316427231,
-    "eval_viggo-val_runtime": 19.8306,
-    "eval_viggo-val_samples_per_second": 36.005,
-    "eval_viggo-val_steps_per_second": 9.026,
-    "total_flos": 4.662888690089984e+16,
-    "train_loss": 0.1828844992744346,
-    "train_runtime": 432.7067,
-    "train_samples_per_second": 11.555,
-    "train_steps_per_second": 0.358
+    "eval_viggo-val_loss": 0.13618840277194977,
+    "eval_viggo-val_runtime": 20.2797,
+    "eval_viggo-val_samples_per_second": 35.208,
+    "eval_viggo-val_steps_per_second": 8.827,
+    "total_flos": 4.843098686147789e+16,
+    "train_loss": 0.2079355036479331,
+    "train_runtime": 437.2951,
+    "train_samples_per_second": 11.434,
+    "train_steps_per_second": 0.354
 }
 ```
-
 
 
 ```python
 display(Image(filename="/mnt/cluster_storage/viggo/outputs/training_loss.png"))
 ```
 
+
     
-<img src="https://raw.githubusercontent.com/anyscale/e2e-llm-workflows/refs/heads/main/images/loss.png" width=500>
+![train loss](https://raw.githubusercontent.com/anyscale/e2e-llm-workflows/refs/heads/main/images/loss.png)
+    
+
 
 
 ```bash
 %%bash
-ls /mnt/cluster_storage/viggo/saves/llama3_8b_sft_lora
+ls /mnt/cluster_storage/viggo/saves/lora_sft_ray
 ```
 
-```output
-TorchTrainer_6ffa1_00000_0_2025-04-06_15-06-49
-basic-variant-state-2025-04-06_15-06-49.json
-experiment_state-2025-04-06_15-06-49.json
-trainer.pkl
-tuner.pkl
-```
+    TorchTrainer_95d16_00000_0_2025-04-11_14-47-37
+    TorchTrainer_f9e4e_00000_0_2025-04-11_12-41-34
+    basic-variant-state-2025-04-11_12-41-34.json
+    basic-variant-state-2025-04-11_14-47-37.json
+    experiment_state-2025-04-11_12-41-34.json
+    experiment_state-2025-04-11_14-47-37.json
+    trainer.pkl
+    tuner.pkl
 
-```
+
+
+```python
 # LoRA paths
-save_dir = Path("/mnt/cluster_storage/viggo/saves/llama3_8b_sft_lora")
+save_dir = Path("/mnt/cluster_storage/viggo/saves/lora_sft_ray")
 trainer_dirs = [d for d in save_dir.iterdir() if d.name.startswith("TorchTrainer_") and d.is_dir()]
 latest_trainer = max(trainer_dirs, key=lambda d: d.stat().st_mtime, default=None)
 lora_path = f"{latest_trainer}/checkpoint_000000/checkpoint"
 s3_lora_path = os.path.join(os.getenv("ANYSCALE_ARTIFACT_STORAGE"), lora_path.split("/mnt/cluster_storage/")[-1])
 dynamic_lora_path, lora_id = s3_lora_path.rsplit("/", 1)
 ```
+
+```bash
+%%bash -s "$lora_path"
+ls $1
+```
+
+```
+README.md
+adapter_config.json
+adapter_model.safetensors
+added_tokens.json
+merges.txt
+optimizer.pt
+rng_state_0.pth
+rng_state_1.pth
+rng_state_2.pth
+rng_state_3.pth
+scheduler.pt
+special_tokens_map.json
+tokenizer.json
+tokenizer_config.json
+trainer_state.json
+training_args.bin
+vocab.json
+```
+
 
 ## Batch inference 
 [`Overview`](https://docs.ray.io/en/latest/data/working-with-llms.html) |  [`API reference`](https://docs.ray.io/en/latest/data/api/llm.html)
@@ -334,14 +477,10 @@ from ray.data.llm import vLLMEngineProcessorConfig, build_llm_processor
 import numpy as np
 ```
 
-    INFO 04-06 15:22:00 __init__.py:194] No platform detected, vLLM is running on UnspecifiedPlatform
-
-
-
 ```python
 config = vLLMEngineProcessorConfig(
-    model_source="meta-llama/Meta-Llama-3-8B-Instruct",
-    runtime_env={"env_vars": {"HF_TOKEN": os.environ.get("HF_TOKEN")}},
+    model_source=model_source,
+    # runtime_env={"env_vars": {"HF_TOKEN": os.environ.get("HF_TOKEN")}},
     engine_kwargs={
         "enable_lora": True,
         "max_lora_rank": 8,
@@ -351,6 +490,7 @@ config = vLLMEngineProcessorConfig(
         "enable_prefix_caching": True,
         "enable_chunked_prefill": True,
         "max_num_batched_tokens": 4096,
+        "max_model_len": 4096,  # or increase KV cache size 
         # complete list: https://docs.vllm.ai/en/stable/serving/engine_args.html
     },
     concurrency=1,
@@ -392,14 +532,14 @@ ds = processor(ds)
 results = ds.take_all()
 results[0]
 ```
-  
+
 ```json
 {
-  "batch_uuid": "af410ea03e304120a33df0571e5fef0f",
+  "batch_uuid": "d7a6b5341cbf4986bb7506ff277cc9cf",
   "embeddings": null,
-  "generated_text": "request(specifier[weirdest])",
-  "generated_tokens": [2079, 39309, 3125, 58, 906, 404, 5086, 2526, 128009],
-  "input": "What do you think is the weirdest game you've ever played?",
+  "generated_text": "request(esrb)",
+  "generated_tokens": [2035, 50236, 10681, 8, 151645],
+  "input": "Do you have a favorite ESRB content rating?",
   "instruction": "Given a target sentence construct the underlying meaning representation of the input sentence as a single function with attributes and attribute values. This function should describe the target string accurately and the function must be one of the following ['inform', 'request', 'give_opinion', 'confirm', 'verify_attribute', 'suggest', 'request_explanation', 'recommend', 'request_attribute']. The attributes must be one of the following: ['name', 'exp_release_date', 'release_year', 'developer', 'esrb', 'rating', 'genres', 'player_perspective', 'has_multiplayer', 'platforms', 'available_on_steam', 'has_linux_release', 'has_mac_release', 'specifier']",
   "messages": [
     {
@@ -407,33 +547,34 @@ results[0]
       "role": "system"
     },
     {
-      "content": "What do you think is the weirdest game you've ever played?",
+      "content": "Do you have a favorite ESRB content rating?",
       "role": "user"
     }
   ],
   "metrics": {
-    "arrival_time": 1743978286.1226327,
-    "finished_time": 1743978293.194894,
-    "first_scheduled_time": 1743978286.9711804,
-    "first_token_time": 1743978288.479632,
-    "last_token_time": 1743978293.1929276,
+    "arrival_time": 1744408857.148983,
+    "finished_time": 1744408863.09091,
+    "first_scheduled_time": 1744408859.130259,
+    "first_token_time": 1744408862.7087252,
+    "last_token_time": 1744408863.089174,
     "model_execute_time": null,
     "model_forward_time": null,
-    "scheduler_time": 0.04725466399997913,
-    "time_in_queue": 0.8485476970672607
+    "scheduler_time": 0.04162892400017881,
+    "time_in_queue": 1.981276035308838
   },
-  "model": "/mnt/cluster_storage/viggo/saves/llama3_8b_sft_lora/TorchTrainer_6ffa1_00000_0_2025-04-06_15-06-49/checkpoint_000000/checkpoint",
-  "num_generated_tokens": 9,
-  "num_input_tokens": 170,
-  "output": "request(specifier[weirdest])",
+  "model": "/mnt/cluster_storage/viggo/saves/lora_sft_ray/TorchTrainer_95d16_00000_0_2025-04-11_14-47-37/checkpoint_000000/checkpoint",
+  "num_generated_tokens": 5,
+  "num_input_tokens": 164,
+  "output": "request_attribute(esrb[])",
   "params": "SamplingParams(n=1, presence_penalty=0.0, frequency_penalty=0.0, repetition_penalty=1.0, temperature=0.3, top_p=1.0, top_k=-1, min_p=0.0, seed=None, stop=[], stop_token_ids=[], bad_words=[], include_stop_str_in_output=False, ignore_eos=False, max_tokens=250, min_tokens=0, logprobs=None, prompt_logprobs=None, skip_special_tokens=True, spaces_between_special_tokens=True, truncate_prompt_tokens=None, guided_decoding=None)",
-  "prompt": "<|begin_of_text|><|start_header_id|>system<|end_header_id|>\n\nGiven a target sentence construct the underlying meaning representation of the input sentence as a single function with attributes and attribute values. This function should describe the target string accurately and the function must be one of the following ['inform', 'request', 'give_opinion', 'confirm', 'verify_attribute', 'suggest', 'request_explanation', 'recommend', 'request_attribute']. The attributes must be one of the following: ['name', 'exp_release_date', 'release_year', 'developer', 'esrb', 'rating', 'genres', 'player_perspective', 'has_multiplayer', 'platforms', 'available_on_steam', 'has_linux_release', 'has_mac_release', 'specifier']<|eot_id|><|start_header_id|>user<|end_header_id|>\n\nWhat do you think is the weirdest game you've ever played?<|eot_id|><|start_header_id|>assistant<|end_header_id|>\n\n",
-  "prompt_token_ids": [128000],
-  "request_id": 12,
-  "time_taken_llm": 7.160030726999992,
-  "generated_output": "request(specifier[weirdest])"
+  "prompt": "<|im_start|>system\nGiven a target sentence construct the underlying meaning representation of the input sentence as a single function with attributes and attribute values. This function should describe the target string accurately and the function must be one of the following ['inform', 'request', 'give_opinion', 'confirm', 'verify_attribute', 'suggest', 'request_explanation', 'recommend', 'request_attribute']. The attributes must be one of the following: ['name', 'exp_release_date', 'release_year', 'developer', 'esrb', 'rating', 'genres', 'player_perspective', 'has_multiplayer', 'platforms', 'available_on_steam', 'has_linux_release', 'has_mac_release', 'specifier']<|im_end|>\n<|im_start|>user\nDo you have a favorite ESRB content rating?<|im_end|>\n<|im_start|>assistant\n",
+  "prompt_token_ids": [151644, "...", 198],
+  "request_id": 94,
+  "time_taken_llm": 6.028705836999961,
+  "generated_output": "request(esrb)"
 }
 ```
+
 
 
 
@@ -446,11 +587,13 @@ for item in results:
 matches / float(len(results))
 ```
 
-```json
-0.7996306555863343
-```
+0.6879039704524469
 
-And of course, we can observe the individual steps in our our batch inference workload through the Anyscale Ray Data dashboard:
+
+
+**Note**: the objective of fine-tuning here is not to create the most performant model (increase `num_train_epochs` if you want to though) but to show it can be leveraged for downstream workloads (batch inference and online serving) at scale.
+
+We can observe the individual steps in our our batch inference workload through the Anyscale Ray Data dashboard:
 
 <img src="https://raw.githubusercontent.com/anyscale/e2e-llm-workflows/refs/heads/main/images/data_dashboard.png" width=1000>
 
@@ -486,6 +629,7 @@ Ray Serve LLM is designed with the following features:
 - **multi availability-zone** aware scheduling of Ray Serve replicas to provide higher redundancy to availability zone failures
 
 
+
 ```python
 import os
 from openai import OpenAI  # to use openai api format
@@ -498,8 +642,6 @@ Let's define an [LLM config](https://docs.ray.io/en/latest/serve/api/doc/ray.ser
 
 ```python
 # Define config
-model_id = "llama-3-8b-instruct"  # call it whatever you want
-model_source = "meta-llama/Meta-Llama-3-8B-Instruct"  # HF model ID, S3 mirror config, or GCS mirror config
 llm_config = LLMConfig(
     model_loading_config={
         "model_id": model_id,
@@ -509,7 +651,7 @@ llm_config = LLMConfig(
         "dynamic_lora_loading_path": dynamic_lora_path,
         "max_num_adapters_per_replica": 16,  # we only have 1
     },
-    runtime_env={"env_vars": {"HF_TOKEN": os.environ.get("HF_TOKEN")}},
+    # runtime_env={"env_vars": {"HF_TOKEN": os.environ.get("HF_TOKEN")}},
     deployment_config={
         "autoscaling_config": {
             "min_replicas": 1, 
@@ -519,6 +661,7 @@ llm_config = LLMConfig(
     },
     accelerator_type="A10G",
     engine_kwargs={
+        "max_model_len": 4096,  # or increase KV cache size
         "tensor_parallel_size": 1,
         "enable_lora": True,
         # complete list: https://docs.vllm.ai/en/stable/serving/engine_args.html
@@ -535,10 +678,7 @@ app = build_openai_app({"llm_configs": [llm_config]})
 serve.run(app)
 ```
 
-```bash
 DeploymentHandle(deployment='LLMRouter')
-```
-
 
 
 ```python
@@ -557,10 +697,9 @@ for chunk in response:
         print(chunk.choices[0].delta.content, end="", flush=True)
 ```
 
-```output
-give_opinion(name[Diablo II], developer[Blizzard North], rating[good], has_mac_release[yes])
-```
+Avg prompt throughput: 20.3 tokens/s, Avg generation throughput: 0.1 tokens/s, Running: 1 reqs, Swapped: 0 reqs, Pending: 0 reqs, GPU KV cache usage: 0.3%, CPU KV cache usage: 0.0%.
 
+_opinion(name[Diablo II], developer[Blizzard North], rating[good], has_mac_release[yes])
 
 And of course, we can observe our running service (deployments and metrics like QPS, latency, etc.) through the [Ray Dashboard](https://docs.ray.io/en/latest/ray-observability/getting-started.html)'s [Serve view](https://docs.ray.io/en/latest/ray-observability/getting-started.html#dash-serve-view):
 
@@ -591,6 +730,7 @@ Seamlessly integrate with your existing CI/CD pipelines by leveraging the Anysca
 - serving [muliple applications](https://docs.anyscale.com/platform/services/multi-app) in a single Service
 
 <img src="https://raw.githubusercontent.com/anyscale/foundational-ray-app/refs/heads/main/images/canary.png" width=700>
+
 
 
 ```bash

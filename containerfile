@@ -1,4 +1,4 @@
-FROM anyscale/ray:2.44.0-py312-cu125
+FROM anyscale/ray-llm:2.44.1-py311-cu124
 
 RUN python3 -m pip install --no-cache-dir --upgrade \
     "ray[serve,llm]>=2.44.0" \
@@ -8,3 +8,6 @@ RUN python3 -m pip install --no-cache-dir --upgrade \
     "hf_transfer==0.1.9" \
     "tensorboard" \
     "git+https://github.com/hiyouga/LLaMA-Factory.git#egg=llamafactory"
+
+# Fast upload/download
+ENV HF_HUB_ENABLE_HF_TRANSFER=1
