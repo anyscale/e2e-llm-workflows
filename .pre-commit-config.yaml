@@ -1,0 +1,41 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+repos:
+  # Standard pre-commit checks
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: check-added-large-files
+        args: ['--maxkb=10000']
+        exclude: ".*\\.ipynb$"
+
+  # Black — auto formatter
+  - repo: https://github.com/psf/black
+    rev: 24.3.0
+    hooks:
+      - id: black
+
+  # isort — organizes imports
+  - repo: https://github.com/PyCQA/isort
+    rev: 5.12.0
+    hooks:
+      - id: isort
+
+  # flake8 — linter
+  - repo: https://github.com/pycqa/flake8
+    rev: 7.0.0
+    hooks:
+      - id: flake8
+
+  # Custom local hook for clearing notebook cell numbers
+  - repo: local
+    hooks:
+      - id: clear-execution-counts
+        name: Clear execution counts in notebooks
+        entry: python clear_cell_nums.py
+        language: system
+        files: \.ipynb$
