@@ -9,7 +9,7 @@ def clear_execution_numbers(nb_path):
     for cell in nb["cells"]:
         if cell["cell_type"] == "code":
             cell["execution_count"] = None
-            for output in cell.get("outputs", []):
+            for output in cell["outputs"]:
                 if "execution_count" in output:
                     output["execution_count"] = None
     with open(nb_path, "w", encoding="utf-8") as f:

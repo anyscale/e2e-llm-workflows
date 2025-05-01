@@ -13,23 +13,12 @@ repos:
         args: ['--maxkb=10000']
         exclude: ".*\\.ipynb$"
 
-  # Black — auto formatter
-  - repo: https://github.com/psf/black
-    rev: 24.3.0
+  # Ruff — replaces black, isort, and flake8
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.8
     hooks:
-      - id: black
-
-  # isort — organizes imports
-  - repo: https://github.com/PyCQA/isort
-    rev: 5.12.0
-    hooks:
-      - id: isort
-
-  # flake8 — linter
-  - repo: https://github.com/pycqa/flake8
-    rev: 7.0.0
-    hooks:
-      - id: flake8
+      - id: ruff
+        args: ["--fix"]
 
   # Custom local hook for clearing notebook cell numbers
   - repo: local
